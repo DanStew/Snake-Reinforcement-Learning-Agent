@@ -1,3 +1,5 @@
+import sys
+import os
 import torch
 import random
 import numpy as np
@@ -15,10 +17,11 @@ LR = 0.001  # Learning Rate
 class SnakeGameAgent:
 
     # Function to initialise the Snake Game Agent
-    def __init__(self):
+    def __init__(self, file_path, randomChoice):
         self.n_games = 0  # Number of games the agent has played
         self.epsilon = 0  # Parameter to control the randomness of the agent
         self.gamma = 0.9  # Discount rate (included as part of the model and trainer)
+        self.randomChoice = randomChoice
         # Defining some memory structure for the agent
         self.memory = deque(
             maxlen=MAX_MEMORY
@@ -27,6 +30,12 @@ class SnakeGameAgent:
             11, 256, 3
         )  # Needs input size, hidden layer size and output size
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
+
+        # Loading into the model for the model if the file name is given
+        if file_path != "":
+            self.model.load_state_dict(
+                torch.load(file_path)
+            )  # Path to your saved model
 
     # Function to get the current state of the agent from the game
     def get_state(self, game):
@@ -110,7 +119,7 @@ class SnakeGameAgent:
         final_move = [0, 0, 0]
         # If the randomly generated number is <epsilon, move in a random direction
         # NOTE : If we play >80 games, epsilon is negative and agent will no longer choose any random move
-        if random.randint(0, 200) < self.epsilon:
+        if random.randint(0, self.randomChoice) < self.epsilon:
             # Choosing a random move and setting it to 1
             move = random.randint(0, 2)
             final_move[move] = 1
@@ -130,14 +139,14 @@ class SnakeGameAgent:
 
 
 # The Train function used to train the agent on the Snake Game
-def train():
+def train(model_file_path, destination_file_path, randomChoice):
     plot_scores = []  # Keeping track of the scores the agent has gotten
     plot_mean_scores = []  # Keeping track of the different means scores for the agent
     total_score = 0  # All scores combined
     record = 0  # Highest score
 
     # Making the agent and the game
-    agent = SnakeGameAgent()
+    agent = SnakeGameAgent(model_file_path, randomChoice)
     game = SnakeGameAI()
 
     while True:
@@ -165,7 +174,7 @@ def train():
 
             if score > record:
                 record = score
-                agent.model.save()
+                agent.model.save(destination_file_path)
 
             print("Game ", agent.n_games, " Score ", score, " Record ", record)
 
@@ -180,4 +189,41 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    # Printing out some instructions for the user
+    print("Use the --model flag to use a presaved model")
+    print("Use the --destination flag to customise where your model is saved")
+    print(
+        "Use the --random flag to customise how random the choices the agent makes are (must be an integer, default is 200)"
+    )
+    model_file_path = ""
+    destination_file_path = "model.pth"
+    randomChoice = 200
+    if "--model" in sys.argv:
+        model_index = sys.argv.index("--model") + 1
+        # Ensuring the model index is in range of the number of arguments
+        if model_index < len(sys.argv):
+            model_file_path = "./model/" + sys.argv[model_index]
+        if not os.path.exists(model_file_path):
+            print("Inputted model file doesn't exist...")
+            print("Exitting from system....")
+            sys.exit()
+    if "--destination" in sys.argv:
+        destination_index = sys.argv.index("--destination") + 1
+        # Ensuring the model index is in range of the number of arguments
+        if destination_index < len(sys.argv):
+            destination_file_path = sys.argv[destination_index]
+        if not sys.argv[2].endswith(".pth"):
+            print("Any Saved File Names must end with .pth")
+            sys.exit()
+    if "--random" in sys.argv:
+        random_index = sys.argv.index("--random") + 1
+        # Ensuring the model index is in range of the number of arguments
+        if random_index < len(sys.argv):
+            randomChoice = sys.argv[random_index]
+        try:
+            randomChoice = int(randomChoice)
+        except:
+            print("Random input must be an integer")
+            sys.exit()
+    # Calling the train function, with the model and destination file path
+    train(model_file_path, destination_file_path, randomChoice)
