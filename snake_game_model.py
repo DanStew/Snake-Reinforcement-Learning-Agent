@@ -15,6 +15,7 @@ class Linear_QNet(nn.Module):
         self.linear2 = nn.Linear(hidden_size, output_size)
 
     # Function to move forward between the layers in the neural network
+    #Here, x is the agent's state, passed from the agent or trainer class
     def forward(self, x):
         # Going through the first layer, optimising the value as well
         x = F.relu(self.linear1(x))
@@ -24,7 +25,7 @@ class Linear_QNet(nn.Module):
         return x
 
     # Function to save the model
-    def save(self, file_name="model.pth"):
+    def save(self, file_name):
         # Making another folder to store our models
         model_folder_path = "./model"
         # If the model folder doesn't exist, make the model folder
